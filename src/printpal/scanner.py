@@ -33,7 +33,10 @@ def scan_for_downloads(agent) -> None:
         if "thingiverse_download_model" in step.code_action:
             _insert_download_from_step(step)
             db.mark_step_scanned(step_key)
-        elif "cura_slice_model" in step.code_action:
+        elif (
+            "cura_slice_model" in step.code_action
+            or "orca_slice_model" in step.code_action
+        ):
             _insert_slice_from_step(step)
             db.mark_step_scanned(step_key)
 

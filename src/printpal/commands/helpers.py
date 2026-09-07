@@ -84,6 +84,7 @@ SLICE_FLAGS = {
     "--temp": ("--t", "material_print_temperature", int, 200, (150, 300)),
     "--bed": ("--b", "material_bed_temperature", int, 60, (0, 120)),
     "--printer": ("--p", "printer", str, "creality_ender3pro", None),
+    "--slicer": ("--sl", "_slicer", str, None, None),
 }
 
 

@@ -58,6 +58,17 @@ CREATE TABLE IF NOT EXISTS logs (
     message    TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS printers (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    cura_printer  TEXT NOT NULL DEFAULT '',
+    orca_machine  TEXT NOT NULL DEFAULT '',
+    orca_process  TEXT NOT NULL DEFAULT '',
+    orca_filament TEXT NOT NULL DEFAULT '',
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
 """
 
 
@@ -100,6 +111,28 @@ def init_db() -> None:
                 "ALTER TABLE sessions ADD COLUMN permissions TEXT NOT NULL DEFAULT '{}'"
             )
             conn.commit()
+
+        # Seed the default printer preset (idempotent) so a fresh install slices
+        # out of the box. Uses INSERT OR IGNORE; never overwrites a user edit.
+        now = datetime.now().isoformat(timespec="seconds")
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO printers
+                (name, cura_printer, orca_machine, orca_process, orca_filament,
+                 created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "ender-3-pro",
+                "creality_ender3pro",
+                "Creality Ender-3 Pro 0.4 nozzle",
+                "0.20mm Standard @Creality Ender3 Pro 0.4",
+                "Creality Generic PLA",
+                now,
+                now,
+            ),
+        )
+        conn.commit()
     finally:
         conn.close()
 
@@ -498,8 +531,120 @@ def delete_setting(key: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Logs
+# Printer presets (named slicer bundles)
 # ---------------------------------------------------------------------------
+# A printer preset bundles everything the slicers need for one machine:
+# the Cura definition id and the OrcaSlicer machine/process/filament presets.
+# "/printer use <name>" applies a preset into the active settings AND records
+# the name in the `active_printer` setting, so /slice and the agent both follow.
+
+
+def _row_to_printer(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "cura_printer": row["cura_printer"],
+        "orca_machine": row["orca_machine"],
+        "orca_process": row["orca_process"],
+        "orca_filament": row["orca_filament"],
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def list_printers() -> list[dict[str, Any]]:
+    """All printer presets, alphabetically by name."""
+    conn = _get_conn()
+    try:
+        rows = conn.execute("SELECT * FROM printers ORDER BY name").fetchall()
+        return [_row_to_printer(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_printer(name: str) -> dict[str, Any] | None:
+    """A printer preset by name (case-insensitive), or None."""
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT * FROM printers WHERE name = ? COLLATE NOCASE", (name,)
+        ).fetchone()
+        return _row_to_printer(row) if row else None
+    finally:
+        conn.close()
+
+
+def upsert_printer(
+    name: str,
+    cura_printer: str = "",
+    orca_machine: str = "",
+    orca_process: str = "",
+    orca_filament: str = "",
+) -> None:
+    """Insert or update a printer preset by name."""
+    now = datetime.now().isoformat(timespec="seconds")
+    conn = _get_conn()
+    try:
+        conn.execute(
+            """
+            INSERT INTO printers (name, cura_printer, orca_machine, orca_process,
+                                  orca_filament, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(name) DO UPDATE SET
+                cura_printer  = excluded.cura_printer,
+                orca_machine  = excluded.orca_machine,
+                orca_process  = excluded.orca_process,
+                orca_filament = excluded.orca_filament,
+                updated_at    = excluded.updated_at
+            """,
+            (name, cura_printer, orca_machine, orca_process, orca_filament, now, now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def delete_printer(name: str) -> bool:
+    """Delete a printer preset by name. Returns True if one was removed."""
+    conn = _get_conn()
+    try:
+        cursor = conn.execute(
+            "DELETE FROM printers WHERE name = ? COLLATE NOCASE", (name,)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
+def get_active_printer() -> dict[str, Any] | None:
+    """The printer preset referenced by the `active_printer` setting, or None."""
+    name = get_setting("active_printer")
+    if not name:
+        return None
+    return get_printer(name)
+
+
+def use_printer(name: str) -> dict[str, Any] | None:
+    """Apply a printer preset into active settings and record it as active.
+
+    Writes the preset's values into the individual config keys (slicer reads
+    those), then sets `active_printer`. Returns the preset, or None if the name
+    doesn't exist.
+    """
+    p = get_printer(name)
+    if p is None:
+        return None
+    if p["cura_printer"]:
+        set_setting("cura_printer", p["cura_printer"])
+    if p["orca_machine"]:
+        set_setting("orca_machine", p["orca_machine"])
+    if p["orca_process"]:
+        set_setting("orca_process", p["orca_process"])
+    if p["orca_filament"]:
+        set_setting("orca_filament", p["orca_filament"])
+    set_setting("active_printer", p["name"])
+    return p
 
 
 def log_message(level: str, message: str) -> None:

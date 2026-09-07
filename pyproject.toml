@@ -25,3 +25,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/printpal"]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: end-to-end tests that require real tools (e.g. OrcaSlicer) or sibling checkouts; deselect with -m 'not integration'",
+]

@@ -16,6 +16,7 @@ COMMAND_COMPLETION = {
     "/sessions": None,
     "/thing": {"delete": None, "export": None},
     "/slice": None,
+    "/printer": {"list": None, "show": None, "use": None, "add": None, "remove": None},
     "/print": {
         "status": None,
         "pause": None,

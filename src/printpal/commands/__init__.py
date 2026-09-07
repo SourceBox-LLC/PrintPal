@@ -11,7 +11,8 @@ COMMANDS = {
     "/load": "Load a saved session. Usage: /load <name|id>",
     "/sessions": "List all saved sessions.",
     "/thing": "Manage downloaded models. Usage: /thing [id|export <id> [dest]|delete <id>]",
-    "/slice": "Slice a model to G-code. Usage: /slice <id> [flags]",
+    "/slice": "Slice a model to G-code (Cura or OrcaSlicer). Usage: /slice <id> [flags] [--slicer cura|orca]",
+    "/printer": "Manage printer presets. Usage: /printer [list|show <name>|use <name>|add <name>|remove <name>]",
     "/print": "Full print pipeline: preheat, upload, start. Usage: /print <id> [--no-preheat]",
     "/print status": "Live printer status, temps, and job progress. Ctrl+C to stop.",
     "/print pause": "Pause the active print job.",
@@ -46,6 +47,7 @@ from .helpers import (  # noqa: E402
 )
 from .session import cmd_save, cmd_load, cmd_sessions  # noqa: E402
 from .thing import cmd_thing, cmd_thing_dispatch, cmd_slice  # noqa: E402
+from .printer import cmd_printer  # noqa: E402
 from .print import (  # noqa: E402
     cmd_print,
     cmd_print_status,
@@ -75,6 +77,7 @@ __all__ = [
     "cmd_thing",
     "cmd_thing_dispatch",
     "cmd_slice",
+    "cmd_printer",
     "cmd_print",
     "cmd_print_status",
     "cmd_print_pause",

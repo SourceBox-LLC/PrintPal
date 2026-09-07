@@ -54,6 +54,7 @@ from .commands import (
     cmd_print_files,
     cmd_print_queue,
     cmd_mode,
+    cmd_printer,
     cmd_config,
     cmd_cost,
     cmd_logs,
@@ -90,6 +91,48 @@ def _inject_db_settings() -> None:
     for db_key, env_key in SETTING_TO_ENV.items():
         if db_key in settings and settings[db_key]:
             os.environ[env_key] = settings[db_key]
+
+
+def _printmcp_server_params() -> tuple["StdioServerParameters", str]:
+    """Build the StdioServerParameters for the PrintMCP server.
+
+    Default: ``uvx printmcp`` (the release published on PyPI). Set the
+    ``PRINTPAL_PRINTMCP_COMMAND`` environment variable to override the launch
+    command — e.g. to develop against a local PrintMCP checkout:
+
+        export PRINTPAL_PRINTMCP_COMMAND="uv run --directory /path/to/PrintMCP printmcp"
+
+    or, from a venv that has printmcp installed:
+
+        export PRINTPAL_PRINTMCP_COMMAND="python -m printmcp"
+
+    The value is split with shlex (so quoted args work). Returns the params
+    plus a short human-readable label of the source for the banner.
+    """
+    import shlex
+
+    override = os.environ.get("PRINTPAL_PRINTMCP_COMMAND", "").strip()
+    if override:
+        parts = shlex.split(override)
+        if not parts:
+            override = ""  # treat whitespace-only as unset
+        else:
+            return (
+                StdioServerParameters(
+                    command=parts[0],
+                    args=parts[1:],
+                    env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                ),
+                f"local ({override})",
+            )
+    return (
+        StdioServerParameters(
+            command="uvx",
+            args=["printmcp"],
+            env={**os.environ, "PYTHONUNBUFFERED": "1"},
+        ),
+        "pypi (uvx printmcp)",
+    )
 
 
 def _sanitize_session_name(prompt: str) -> str:
@@ -146,10 +189,15 @@ def _get_session_cost(agent, model_id: str) -> float:
         return 0.0
 
 
-def _print_banner(tool_count: int = 0) -> None:
+def _print_banner(tool_count: int = 0, printmcp_source: str = "", slicer: str = "") -> None:
     tip = random.choice(TIPS)
     if tool_count > 0:
-        mcp_status = Text(f"PrintMCP: connected ({tool_count} tools)\n", style="green")
+        mcp_status = Text(f"PrintMCP: connected ({tool_count} tools)", style="green")
+        if printmcp_source:
+            mcp_status.append(f"  [{printmcp_source}]", style="dim")
+        if slicer:
+            mcp_status.append(f"\nslicer: {slicer}", style="dim")
+        mcp_status.append("\n")
     else:
         mcp_status = Text("PrintMCP: not connected\n", style="bold red")
 
@@ -160,10 +208,23 @@ def _print_banner(tool_count: int = 0) -> None:
             logo_text
             + mcp_status
             + Text(f"model: {MODEL_ID}\n", style="dim")
-            + Text(f"\u2605 {tip}", style=f"italic {ACCENT}"),
+            + Text(f"★ {tip}", style=f"italic {ACCENT}"),
             border_style=ACCENT,
         )
     )
+
+
+def _detect_slicer_label(tool_names: set[str]) -> str:
+    """Human label for which slicer backend(s) the connected PrintMCP exposed."""
+    has_orca = "orca_slice_model" in tool_names
+    has_cura = "cura_slice_model" in tool_names
+    if has_orca and has_cura:
+        return "OrcaSlicer + Cura"
+    if has_orca:
+        return "OrcaSlicer"
+    if has_cura:
+        return "Cura"
+    return ""
 
 
 def _print_status_line(
@@ -335,11 +396,7 @@ def main():
     except Exception:
         pass
 
-    server_params = StdioServerParameters(
-        command="uvx",
-        args=["printmcp"],
-        env={**os.environ, "PYTHONUNBUFFERED": "1"},
-    )
+    server_params, printmcp_source = _printmcp_server_params()
 
     try:
         with MCPClient(server_params, structured_output=True) as tools:
@@ -357,7 +414,8 @@ def main():
             history = InMemoryHistory() if _HAS_PT else None
             tool_count = len(tools)
             current_session_name = None
-            _print_banner(tool_count)
+            slicer_label = _detect_slicer_label({t.name for t in tools})
+            _print_banner(tool_count, printmcp_source, slicer_label)
 
             while True:
                 try:
@@ -380,7 +438,13 @@ def main():
                     continue
 
                 if user_input.startswith("/"):
-                    parts = user_input.split()
+                    try:
+                        import shlex
+
+                        parts = shlex.split(user_input)
+                    except ValueError:
+                        # Unbalanced quote — fall back to plain whitespace split.
+                        parts = user_input.split()
                     cmd = parts[0].lower()
                     args = parts[1:]
 
@@ -480,7 +544,7 @@ def main():
 
                         if cmd == "/redraw":
                             console.clear()
-                            _print_banner(tool_count)
+                            _print_banner(tool_count, printmcp_source, slicer_label)
                             continue
 
                         if cmd == "/self-destruct":
@@ -494,6 +558,10 @@ def main():
 
                         if cmd == "/slice":
                             cmd_slice(args, tools)
+                            continue
+
+                        if cmd == "/printer":
+                            cmd_printer(args)
                             continue
 
                         if cmd == "/print":
