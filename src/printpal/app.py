@@ -8,15 +8,15 @@ and natural language prompts.
 from __future__ import annotations
 
 import copy
-import jsonref
+import os
 import random
 import re
 import sys
-import os
 
-from smolagents import CodeAgent, LiteLLMModel, MCPClient
-from mcp import StdioServerParameters
+import jsonref
 from dotenv import load_dotenv
+from mcp import StdioServerParameters
+from smolagents import CodeAgent, LiteLLMModel, MCPClient
 
 try:
     from prompt_toolkit.formatted_text import FormattedText
@@ -30,39 +30,39 @@ except ImportError:
 from rich.panel import Panel
 from rich.text import Text
 
-from .ui import console, ACCENT, LOGO, make_bar, format_tokens
 from . import db
-from .config import MODEL_ID, SETTING_TO_ENV, TIPS, EXAMPLES
-from .permissions import PermissionState, PermissionTool, ApprovalMode
-from .completer import CommandCompleter
-from .scanner import scan_for_downloads
-from .sessions import migrate_json_sessions, save_session, _resolve_name
 from .commands import (
     COMMANDS,
-    cmd_save,
+    cmd_backup,
+    cmd_config,
+    cmd_cost,
+    cmd_help,
     cmd_load,
-    cmd_sessions,
-    cmd_thing_dispatch,
-    cmd_slice,
+    cmd_logs,
+    cmd_mode,
     cmd_print,
-    cmd_print_status,
-    cmd_print_pause,
-    cmd_print_resume,
     cmd_print_cancel,
     cmd_print_connect,
     cmd_print_disconnect,
     cmd_print_files,
+    cmd_print_pause,
     cmd_print_queue,
-    cmd_mode,
+    cmd_print_resume,
+    cmd_print_status,
     cmd_printer,
-    cmd_config,
-    cmd_cost,
-    cmd_logs,
-    cmd_backup,
+    cmd_save,
     cmd_self_destruct,
-    cmd_help,
+    cmd_sessions,
+    cmd_slice,
+    cmd_thing_dispatch,
     prompt_save_if_dirty,
 )
+from .completer import CommandCompleter
+from .config import EXAMPLES, MODEL_ID, SETTING_TO_ENV, TIPS
+from .permissions import ApprovalMode, PermissionState, PermissionTool
+from .scanner import scan_for_downloads
+from .sessions import _resolve_name, migrate_json_sessions, save_session
+from .ui import ACCENT, LOGO, console, format_tokens, make_bar
 
 load_dotenv()
 
@@ -89,11 +89,11 @@ def _inject_db_settings() -> None:
     """Load DB settings into os.environ (overriding .env values)."""
     settings = db.get_all_settings()
     for db_key, env_key in SETTING_TO_ENV.items():
-        if db_key in settings and settings[db_key]:
+        if settings.get(db_key):
             os.environ[env_key] = settings[db_key]
 
 
-def _printmcp_server_params() -> tuple["StdioServerParameters", str]:
+def _printmcp_server_params() -> tuple[StdioServerParameters, str]:
     """Build the StdioServerParameters for the PrintMCP server.
 
     Default: ``uvx printmcp`` (the release published on PyPI). Set the
@@ -386,9 +386,7 @@ def main():
         migrate_json_sessions()
     except Exception as e:
         console.print(Text(f"Database error: {e}", style="bold red"))
-        console.print(
-            Text("Try /self-destruct to reset, or check ~/.printpal/", style="dim")
-        )
+        console.print(Text("Try /self-destruct to reset, or check ~/.printpal/", style="dim"))
         return
 
     try:
@@ -419,9 +417,7 @@ def main():
 
             while True:
                 try:
-                    _print_status_line(
-                        tool_count, perm_state, agent, current_session_name
-                    )
+                    _print_status_line(tool_count, perm_state, agent, current_session_name)
                     user_input = _read_prompt(history, perm_state)
                 except (EOFError, KeyboardInterrupt):
                     console.print()
@@ -472,9 +468,7 @@ def main():
                                 perm_state.to_json(),
                             ):
                                 dirty = False
-                                current_session_name = (
-                                    args[0] if args else current_session_name
-                                )
+                                current_session_name = args[0] if args else current_session_name
                             continue
 
                         if cmd == "/load":
@@ -492,9 +486,7 @@ def main():
                                     history = InMemoryHistory()
                                     for p in result["prompt_history"]:
                                         history.append_string(p)
-                                perm_state = PermissionState.from_json(
-                                    result["permissions"]
-                                )
+                                perm_state = PermissionState.from_json(result["permissions"])
                                 for wt in wrapped_tools:
                                     wt._perm = perm_state
                                 resolved = _resolve_name(args[0])
@@ -598,9 +590,7 @@ def main():
                     except Exception as e:
                         console.print(Text(f"Error: {e}", style="bold red"))
                         try:
-                            db.log_message(
-                                "ERROR", f"Command '{cmd}': {type(e).__name__}: {e}"
-                            )
+                            db.log_message("ERROR", f"Command '{cmd}': {type(e).__name__}: {e}")
                         except Exception:
                             pass
                         continue

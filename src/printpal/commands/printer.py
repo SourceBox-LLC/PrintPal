@@ -48,9 +48,7 @@ def _list() -> None:
         console.print(Text("No printer presets. Add one with /printer add.", style="dim"))
         return
 
-    table = Table(
-        show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT
-    )
+    table = Table(show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT)
     table.add_column("", width=2)  # active marker
     table.add_column("Name", style=f"bold {ACCENT}", min_width=14)
     table.add_column("Cura printer", style="dim")
@@ -78,7 +76,9 @@ def _show(args: list[str]) -> None:
     if not name:
         active = db.get_active_printer()
         if active is None:
-            console.print(Text("No active printer. /printer use <name> to select one.", style="dim"))
+            console.print(
+                Text("No active printer. /printer use <name> to select one.", style="dim")
+            )
             return
         p = active
     else:
@@ -90,7 +90,9 @@ def _show(args: list[str]) -> None:
     active = db.get_active_printer()
     is_active = active is not None and active["name"].lower() == p["name"].lower()
     lines = [
-        Text(f"Name:         {p['name']}{'  (active)' if is_active else ''}", style=f"bold {ACCENT}"),
+        Text(
+            f"Name:         {p['name']}{'  (active)' if is_active else ''}", style=f"bold {ACCENT}"
+        ),
         Text(f"Cura printer: {p['cura_printer'] or '—'}"),
         Text(f"Orca machine: {p['orca_machine'] or '—'}"),
         Text(f"Orca process: {p['orca_process'] or '—'}"),
@@ -109,13 +111,9 @@ def _use(args: list[str]) -> None:
     applied = db.use_printer(name)
     if applied is None:
         near = ", ".join(p["name"] for p in db.list_printers()) or "(none)"
-        console.print(
-            Text(f"No printer preset '{name}'. Available: {near}", style="bold red")
-        )
+        console.print(Text(f"No printer preset '{name}'. Available: {near}", style="bold red"))
         return
-    console.print(
-        Text(f"Active printer: {applied['name']}", style=f"bold {ACCENT}")
-    )
+    console.print(Text(f"Active printer: {applied['name']}", style=f"bold {ACCENT}"))
     console.print(Text(f"  Orca machine:  {applied['orca_machine'] or '—'}", style="dim"))
     console.print(Text(f"  Orca process:  {applied['orca_process'] or '—'}", style="dim"))
     console.print(Text(f"  Orca filament: {applied['orca_filament'] or '—'}", style="dim"))
@@ -128,7 +126,12 @@ def _parse_add_opts(args: list[str]) -> tuple[str, dict[str, str]]:
         raise ValueError("Usage: /printer add <name> [options]")
     name = args[0]
     opts = {"cura": "", "machine": "", "process": "", "filament": ""}
-    flagmap = {"--cura": "cura", "--machine": "machine", "--process": "process", "--filament": "filament"}
+    flagmap = {
+        "--cura": "cura",
+        "--machine": "machine",
+        "--process": "process",
+        "--filament": "filament",
+    }
     i = 1
     while i < len(args):
         flag = args[i]

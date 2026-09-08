@@ -14,9 +14,8 @@ from rich.console import Group
 from rich.live import Live
 from rich.text import Text
 
-from ..ui import console, ACCENT, prompt_yes_no, format_duration
 from ..sessions import next_default_name, save_session
-
+from ..ui import ACCENT, console, format_duration, prompt_yes_no
 
 # ---------------------------------------------------------------------------
 # Tool helpers
@@ -95,7 +94,7 @@ def parse_slice_flags(args: list[str]) -> dict:
     while i < len(args):
         arg = args[i].lower()
         matched = False
-        for long_flag, (short_flag, key, typ, default, bounds) in SLICE_FLAGS.items():
+        for long_flag, (short_flag, key, typ, _default, bounds) in SLICE_FLAGS.items():
             if arg != long_flag and arg != short_flag:
                 continue
             matched = True
@@ -107,11 +106,9 @@ def parse_slice_flags(args: list[str]) -> dict:
                 i += 1
                 val = args[i]
                 try:
-                    parsed = (
-                        int(val) if typ is int else float(val) if typ is float else val
-                    )
-                except ValueError:
-                    raise ValueError(f"Invalid value for {arg}: {val}")
+                    parsed = int(val) if typ is int else float(val) if typ is float else val
+                except ValueError as e:
+                    raise ValueError(f"Invalid value for {arg}: {val}") from e
                 if bounds:
                     lo, hi = bounds
                     if parsed < lo or parsed > hi:
@@ -189,13 +186,9 @@ def preheat(tools: list, tool_temp: int, bed_temp: int) -> bool:
     try:
         with Live(console=console, refresh_per_second=1) as live:
             while elapsed < max_wait:
-                status = call_tool(
-                    tools, "octoprint_get_status", response_format="json"
-                )
+                status = call_tool(tools, "octoprint_get_status", response_format="json")
                 if not status:
-                    live.update(
-                        Text("Could not read printer status.", style="bold red")
-                    )
+                    live.update(Text("Could not read printer status.", style="bold red"))
                     break
 
                 temps = status.get("temperatures", {})
@@ -207,12 +200,8 @@ def preheat(tools: list, tool_temp: int, bed_temp: int) -> bool:
                 bed_ok = abs(bed_actual - bed_temp) <= 2
                 tool_ok = abs(tool_actual - tool_temp) <= 2
 
-                bed_pct = min(
-                    100, int((bed_actual / bed_temp * 100) if bed_temp else 100)
-                )
-                tool_pct = min(
-                    100, int((tool_actual / tool_temp * 100) if tool_temp else 100)
-                )
+                bed_pct = min(100, int((bed_actual / bed_temp * 100) if bed_temp else 100))
+                tool_pct = min(100, int((tool_actual / tool_temp * 100) if tool_temp else 100))
 
                 bed_bar = "█" * (bed_pct // 10) + "░" * (10 - bed_pct // 10)
                 tool_bar = "█" * (tool_pct // 10) + "░" * (10 - tool_pct // 10)
@@ -230,20 +219,14 @@ def preheat(tools: list, tool_temp: int, bed_temp: int) -> bool:
                     live.update(Group(*lines))
                     return True
                 if elapsed > 0:
-                    lines.append(
-                        Text(f"  Elapsed: {format_duration(elapsed)}", style="dim")
-                    )
+                    lines.append(Text(f"  Elapsed: {format_duration(elapsed)}", style="dim"))
                 live.update(Group(*lines))
 
                 time.sleep(poll_interval)
                 elapsed += poll_interval
 
-        console.print(
-            Text("  Preheat timeout (10 min). Proceeding anyway.", style="yellow")
-        )
+        console.print(Text("  Preheat timeout (10 min). Proceeding anyway.", style="yellow"))
         return True
     except KeyboardInterrupt:
-        console.print(
-            Text("\n  Preheat interrupted. Proceeding anyway.", style="yellow")
-        )
+        console.print(Text("\n  Preheat interrupted. Proceeding anyway.", style="yellow"))
         return True

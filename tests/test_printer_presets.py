@@ -151,7 +151,9 @@ def test_remove_active_printer_clears_applied_settings(tmp_db, monkeypatch):
     from printpal.commands import printer as pp_printer
 
     monkeypatch.setattr(pp_printer, "prompt_yes_no", lambda _msg: True)
-    db.upsert_printer("v24", orca_machine="Voron", orca_process="P", orca_filament="F", cura_printer="voron24")
+    db.upsert_printer(
+        "v24", orca_machine="Voron", orca_process="P", orca_filament="F", cura_printer="voron24"
+    )
     db.use_printer("v24")
     assert db.get_setting("orca_machine") == "Voron"
 
@@ -221,9 +223,7 @@ def test_slice_cura_flag_beats_active_printer(tmp_db):
     db.upsert_printer("v24", cura_printer="voron24_cura")
     db.use_printer("v24")
     tool = _StubCuraTool()
-    pp_thing.cmd_slice(
-        [str(_seed_model()), "--slicer", "cura", "--printer", "prusa_mk4"], [tool]
-    )
+    pp_thing.cmd_slice([str(_seed_model()), "--slicer", "cura", "--printer", "prusa_mk4"], [tool])
     assert tool.kwargs is not None
     assert tool.kwargs["printer"] == "prusa_mk4"  # explicit flag wins
 

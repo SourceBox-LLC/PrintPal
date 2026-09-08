@@ -28,33 +28,54 @@ if _PRINTMCP_SRC.is_dir() and str(_PRINTMCP_SRC) not in sys.path:
 pytest.importorskip("printmcp.config", reason="PrintMCP checkout not found next to PrintPal")
 pytest.importorskip("printmcp.orca", reason="PrintMCP checkout has no orca module")
 
-from printmcp.config import get_orca_paths
-from printmcp.orca import orca_slice_model
+from printmcp.config import get_orca_paths  # noqa: E402  (after importorskip + sys.path shim)
+from printmcp.orca import orca_slice_model  # noqa: E402
 
-from printpal import db as pp_db
-from printpal.commands import thing as pp_thing
+from printpal import db as pp_db  # noqa: E402
+from printpal.commands import thing as pp_thing  # noqa: E402
 
 
 def _write_cube_stl(path) -> None:
     """Write a valid closed 20mm binary cube STL (12 triangles)."""
-    V = [(0, 0, 0), (20, 0, 0), (20, 20, 0), (0, 20, 0),
-         (0, 0, 20), (20, 0, 20), (20, 20, 20), (0, 20, 20)]
-    F = [(0, 3, 2), (0, 2, 1), (4, 5, 6), (4, 6, 7), (0, 1, 5), (0, 5, 4),
-         (2, 3, 7), (2, 7, 6), (1, 2, 6), (1, 6, 5), (0, 4, 7), (0, 7, 3)]
+    vertices = [
+        (0, 0, 0),
+        (20, 0, 0),
+        (20, 20, 0),
+        (0, 20, 0),
+        (0, 0, 20),
+        (20, 0, 20),
+        (20, 20, 20),
+        (0, 20, 20),
+    ]
+    faces = [
+        (0, 3, 2),
+        (0, 2, 1),
+        (4, 5, 6),
+        (4, 6, 7),
+        (0, 1, 5),
+        (0, 5, 4),
+        (2, 3, 7),
+        (2, 7, 6),
+        (1, 2, 6),
+        (1, 6, 5),
+        (0, 4, 7),
+        (0, 7, 3),
+    ]
 
     def nrm(a, b, c):
         import math
+
         ux, uy, uz = [b[i] - a[i] for i in range(3)]
         vx, vy, vz = [c[i] - a[i] for i in range(3)]
         n = (uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx)
-        L = math.sqrt(sum(x * x for x in n)) or 1
-        return tuple(x / L for x in n)
+        length = math.sqrt(sum(x * x for x in n)) or 1
+        return tuple(x / length for x in n)
 
     with open(path, "wb") as fh:
         fh.write(b"\0" * 80)
-        fh.write(struct.pack("<I", len(F)))
-        for f in F:
-            a, b, c = [V[i] for i in f]
+        fh.write(struct.pack("<I", len(faces)))
+        for f in faces:
+            a, b, c = [vertices[i] for i in f]
             fh.write(struct.pack("<12fH", *nrm(a, b, c), *[c_ for v in (a, b, c) for c_ in v], 0))
 
 

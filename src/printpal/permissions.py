@@ -16,12 +16,11 @@ import json
 from enum import Enum
 from typing import Any
 
+import smolagents
 from rich.panel import Panel
 from rich.text import Text
 
-import smolagents
-from .ui import console, ACCENT
-
+from .ui import ACCENT, console
 
 # ---------------------------------------------------------------------------
 # Tool categories
@@ -175,9 +174,7 @@ def _prompt_approval(tool_name: str, args: dict | None = None) -> str:
         Text(f"Category: {category}"),
     ]
     if args:
-        arg_str = ", ".join(
-            f"{k}={v}" for k, v in args.items() if k != "response_format"
-        )
+        arg_str = ", ".join(f"{k}={v}" for k, v in args.items() if k != "response_format")
         if arg_str:
             lines.append(Text(f"Args:     {arg_str[:120]}"))
 
@@ -235,9 +232,7 @@ class PermissionTool(smolagents.Tool):
             if args and len(args) == 1 and isinstance(args[0], dict):
                 display_args = args[0]
             elif kwargs:
-                display_args = {
-                    k: v for k, v in kwargs.items() if k != "response_format"
-                }
+                display_args = {k: v for k, v in kwargs.items() if k != "response_format"}
 
             response = _prompt_approval(self.name, display_args)
 
