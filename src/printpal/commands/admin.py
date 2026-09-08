@@ -9,9 +9,9 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..ui import console, ACCENT, prompt_yes_no, format_size, make_bar
 from .. import db
-from ..pricing import MODEL_PRICING, MASKED_KEYS, RESTART_KEYS
+from ..pricing import MASKED_KEYS, MODEL_PRICING, RESTART_KEYS
+from ..ui import ACCENT, console, format_size, make_bar, prompt_yes_no
 
 
 def cmd_config(args: list[str]) -> None:
@@ -64,9 +64,7 @@ def cmd_config(args: list[str]) -> None:
             )
         )
         if key in RESTART_KEYS:
-            console.print(
-                Text("  Restart PrintPal to apply this setting.", style="yellow")
-            )
+            console.print(Text("  Restart PrintPal to apply this setting.", style="yellow"))
 
     elif sub == "get":
         if len(args) < 2:
@@ -91,11 +89,7 @@ def cmd_config(args: list[str]) -> None:
             console.print(Text(f"  {key} was not set", style="dim"))
 
     else:
-        console.print(
-            Text(
-                "Usage: /config [set <key> <value>|get <key>|unset <key>]", style="dim"
-            )
-        )
+        console.print(Text("Usage: /config [set <key> <value>|get <key>|unset <key>]", style="dim"))
 
 
 def cmd_cost(agent, model_id: str) -> None:
@@ -174,9 +168,7 @@ def cmd_logs(args: list[str]) -> None:
         console.print(Text("No log entries.", style="dim"))
         return
 
-    table = Table(
-        show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT
-    )
+    table = Table(show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT)
     table.add_column("ID", style="dim", width=5)
     table.add_column("Level", width=8)
     table.add_column("Message", min_width=30)
@@ -185,11 +177,7 @@ def cmd_logs(args: list[str]) -> None:
     for log in logs:
         level_str = log["level"]
         level_style = (
-            "bold red"
-            if level_str == "ERROR"
-            else "yellow"
-            if level_str == "WARNING"
-            else "dim"
+            "bold red" if level_str == "ERROR" else "yellow" if level_str == "WARNING" else "dim"
         )
         table.add_row(
             str(log["id"]),
@@ -291,9 +279,7 @@ def cmd_self_destruct() -> bool:
         return False
 
     if confirmation != "DELETE":
-        console.print(
-            Text("Confirmation did not match. Self-destruct aborted.", style="dim")
-        )
+        console.print(Text("Confirmation did not match. Self-destruct aborted.", style="dim"))
         return False
 
     # Delete everything
@@ -302,9 +288,7 @@ def cmd_self_destruct() -> bool:
     try:
         if printpal_dir.exists():
             shutil.rmtree(str(printpal_dir))
-        console.print(
-            Text("  All PrintPal data has been permanently deleted.", style="bold red")
-        )
+        console.print(Text("  All PrintPal data has been permanently deleted.", style="bold red"))
         return True
     except Exception as e:
         console.print(Text(f"  Error during deletion: {e}", style="bold red"))

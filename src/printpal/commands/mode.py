@@ -5,8 +5,8 @@ from __future__ import annotations
 from rich.panel import Panel
 from rich.text import Text
 
-from ..ui import console, ACCENT, prompt_yes_no
-from ..permissions import ApprovalMode, READ_ONLY, SAFE_ACTIONS, PHYSICAL
+from ..permissions import PHYSICAL, READ_ONLY, SAFE_ACTIONS, ApprovalMode
+from ..ui import ACCENT, console, prompt_yes_no
 
 
 def cmd_mode(args: list[str], perm_state) -> None:
@@ -24,21 +24,13 @@ def cmd_mode(args: list[str], perm_state) -> None:
         for mode in ApprovalMode:
             marker = "\u25cf" if mode == current else "\u25cb"
             warning = " \u26a0" if mode == ApprovalMode.BYPASS else ""
-            lines.append(
-                Text(f"  {marker} {mode.value:8s} \u2014 {mode.label}{warning}")
-            )
+            lines.append(Text(f"  {marker} {mode.value:8s} \u2014 {mode.label}{warning}"))
 
         lines.append(Text(""))
         lines.append(Text("Tool Categories:", style="bold"))
-        lines.append(
-            Text(f"  \U0001f441  Read-only:     {', '.join(sorted(READ_ONLY))}")
-        )
-        lines.append(
-            Text(f"  \u2702  Safe actions:  {', '.join(sorted(SAFE_ACTIONS))}")
-        )
-        lines.append(
-            Text(f"  \U0001f527  Physical:      {', '.join(sorted(PHYSICAL))}")
-        )
+        lines.append(Text(f"  \U0001f441  Read-only:     {', '.join(sorted(READ_ONLY))}"))
+        lines.append(Text(f"  \u2702  Safe actions:  {', '.join(sorted(SAFE_ACTIONS))}"))
+        lines.append(Text(f"  \U0001f527  Physical:      {', '.join(sorted(PHYSICAL))}"))
 
         if perm_state.allow_list:
             lines.append(Text(""))
@@ -86,6 +78,4 @@ def cmd_mode(args: list[str], perm_state) -> None:
         if new_mode == ApprovalMode.BYPASS
         else "dim"
     )
-    console.print(
-        Text(f"Mode set to {new_mode.label} ({new_mode.value}).", style=f"bold {style}")
-    )
+    console.print(Text(f"Mode set to {new_mode.label} ({new_mode.value}).", style=f"bold {style}"))

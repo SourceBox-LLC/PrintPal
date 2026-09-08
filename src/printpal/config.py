@@ -9,6 +9,25 @@ switching is added, the ``MODEL_ID`` and model registry will live here.
 # When model switching is added, this will be read from DB settings.
 MODEL_ID = "claude-sonnet-4-6"
 
+# Default OrcaSlicer presets used by /slice when slicing via OrcaSlicer.
+# Override per-user via /config set orca_machine "...", etc. Defaults assume a
+# Creality Ender-3 Pro with a 0.4 nozzle, matching the Cura default printer id.
+ORCA_DEFAULTS = {
+    "slicer": "auto",  # auto | cura | orca  (which backend /slice prefers)
+    "orca_machine": "Creality Ender-3 Pro 0.4 nozzle",
+    "orca_process": "0.20mm Standard @Creality Ender3 Pro 0.4",
+    "orca_filament": "Creality Generic PLA",
+}
+
+# Map PrintPal's simple /slice flags to OrcaSlicer setting keys (passed as
+# `overrides` on the preset copies). Only flags the user actually sets are sent.
+ORCA_FLAG_OVERRIDES = {
+    "layer_height": "layer_height",
+    "infill_density": "sparse_infill_density",
+    "material_print_temperature": "nozzle_temperature",
+    "material_bed_temperature": "bed_temperature",
+}
+
 # Settings keys that map to environment variables for PrintMCP.
 # DB settings override .env values — injected into os.environ on startup.
 SETTING_TO_ENV = {

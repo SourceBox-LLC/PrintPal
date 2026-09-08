@@ -36,7 +36,7 @@ It's like having a 3D printing expert sitting next to you, ready to find and pre
 
 - **Natural language search** — just describe what you want to print
 - **Self-contained storage** — all models and G-code stored as BLOBs in SQLite, no external files
-- **Direct slicing** — `/slice <id>` runs CuraEngine instantly, zero AI tokens
+- **Direct slicing** — `/slice <id>` runs CuraEngine or OrcaSlicer instantly, zero AI tokens
 - **Full print pipeline** — `/print <id>` preheats, uploads to OctoPrint, and starts
 - **Permission system** — control what the agent can do (Manual / Auto / Bypass modes)
 - **Session management** — save/load conversations with full memory and prompt history
@@ -100,7 +100,7 @@ Settings can be stored in `.env` (for initial setup) or managed at runtime with 
 | `thingiverse_token` | `THINGIVERSE_TOKEN` | Searching & downloading | Yes |
 | `octoprint_url` | `OCTOPRINT_URL` | Printing | No |
 | `octoprint_api_key` | `OCTOPRINT_API_KEY` | Printing | Yes |
-| `cura_dir` | `PRINTMCP_CURA_DIR` | Slicing (auto-detected) | No |
+| `cura_dir` | `PRINTMCP_CURA_DIR` | Slicing (Cura; auto-detected) | No |
 | `auto_save` | — | Optional convenience | No |
 
 ## 🎮 Commands
@@ -127,16 +127,51 @@ Settings can be stored in `.env` (for initial setup) or managed at runtime with 
 
 ### Slicing
 
+`/slice` uses whichever slicer you have. **OrcaSlicer is preferred** when both are installed; force one with `--slicer cura|orca`.
+
 | Command | Description |
 |---------|-------------|
-| `/slice <id>` | Slice a model to G-code using CuraEngine |
+| `/slice <id>` | Slice a model to G-code (auto-detected slicer) |
+| `/slice <id> --slicer cura` | Force CuraEngine for this slice |
+| `/slice <id> --slicer orca` | Force OrcaSlicer for this slice |
 | `/slice <id> --layer-height 0.12` | Set layer height (0.05–0.6mm) |
 | `/slice <id> --infill 40 --supports` | Set infill % and enable supports |
-| `/slice <id> --printer creality_ender3pro` | Set printer profile |
+| `/slice <id> --printer creality_ender3pro` | Set printer profile (Cura) |
 | `/slice <id> --temp 210 --bed 65` | Set nozzle and bed temperatures |
 | `/slice <id> --adhesion brim` | Set adhesion type (skirt/brim/raft/none) |
 
-Short flags: `--lh`, `--inf`, `--sup`, `--ad`, `--t`, `--b`, `--p`
+Short flags: `--lh`, `--inf`, `--sup`, `--ad`, `--t`, `--b`, `--p`, `--sl`
+
+For **OrcaSlicer**, PrintPal uses its 3-tier presets (machine / process / filament). Defaults assume an Ender-3 Pro with a 0.4 nozzle; point them at your machine and material via `/config`:
+
+```bash
+/config set slicer orca                                   # prefer OrcaSlicer always
+/config set orca_machine "Creality Ender-3 Pro 0.4 nozzle"
+/config set orca_process "0.20mm Standard @Creality Ender3 Pro 0.4"
+/config set orca_filament "Creality Generic PLA"
+```
+
+Find preset names with the PrintMCP `orca_list_profiles` tool (or ask the agent: "list my OrcaSlicer machine presets").
+
+### Printers
+
+A **printer preset** bundles everything the slicers need for one machine — the Cura definition id and the OrcaSlicer machine/process/filament presets — under one name. `/printer use <name>` applies the bundle so `/slice` (and the agent) slice for that printer. A default `ender-3-pro` preset ships with the app.
+
+| Command | Description |
+|---------|-------------|
+| `/printer` or `/printer list` | List presets (marks the active one with ●) |
+| `/printer show [name]` | Show one preset's slicer settings (no arg = active) |
+| `/printer use <name>` | Activate a preset — applies it to slicing |
+| `/printer add <name> [options]` | Save a preset. Options: `--cura <id> --machine <m> --process <p> --filament <f>` |
+| `/printer remove <name>` | Delete a preset |
+
+Adding with no options pre-fills from the Ender-3 Pro defaults so you can tweak from a working baseline. Names with spaces work either quoted or unquoted (the command joins the remaining words):
+
+```bash
+/printer add "Voron 2.4" --machine "Voron 2.4 0.4 nozzle" --process "0.20mm Standard" --filament "Generic PLA"
+/printer use Voron 2.4
+/slice 1
+```
 
 ### Printing
 
@@ -228,6 +263,24 @@ PrintPal connects to **[PrintMCP](https://github.com/SourceBox-LLC/PrintMCP)** �
 
 The AI agent (powered by [smolagents](https://github.com/huggingface/smolagents) + LiteLLM) uses these tools autonomously. Slash commands like `/slice` and `/print` call the tools directly — no AI tokens spent.
 
+### Developing against a local PrintMCP
+
+By default PrintPal launches the published PrintMCP package (`uvx printmcp`). To develop both repos together — e.g. you're editing PrintMCP's tools and want PrintPal to use your local checkout — set `PRINTPAL_PRINTMCP_COMMAND` to the launch command before starting PrintPal:
+
+```bash
+# Point PrintPal at your local PrintMCP checkout:
+export PRINTPAL_PRINTMCP_COMMAND="uv run --directory /path/to/PrintMCP printmcp"
+uv run printpal
+```
+
+or, from any venv that already has `printmcp` installed:
+
+```bash
+export PRINTPAL_PRINTMCP_COMMAND="python -m printmcp"
+```
+
+The value is split with `shlex`, so quoted paths with spaces work. Which server you're talking to is shown in the startup banner — `pypi (uvx printmcp)` by default or `local (<your command>)` when overridden. Unset the variable to go back to the PyPI release.
+
 ### Database
 
 Everything is stored in a single SQLite file at `~/.printpal/printpal.db`:
@@ -251,6 +304,7 @@ Backups are stored at `~/.printpal/backups/`.
 | `THINGIVERSE_TOKEN is not set` | Run `/config set thingiverse_token <token>` or add to `.env` |
 | `OCTOPRINT_URL and OCTOPRINT_API_KEY not set` | Run `/config set octoprint_url <url>` and `/config set octoprint_api_key <key>` |
 | `CuraEngine not found` | Install Ultimaker Cura, or set `PRINTMCP_CURA_DIR` via `/config set cura_dir <path>` |
+| `orca_slice_model tool not found` | Install [OrcaSlicer](https://www.orcaslicer.com/) (native or Flatpak), or slice with Cura: `/slice <id> --slicer cura` |
 | Permission denied on every tool call | Switch to auto mode: `/mode auto` or press Shift+Tab |
 | `uv` not found | Install uv: `pip install uv` or see [uv docs](https://docs.astral.sh/uv/) |
 

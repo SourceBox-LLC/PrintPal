@@ -6,7 +6,7 @@ from rich import box
 from rich.table import Table
 from rich.text import Text
 
-from ..ui import console, ACCENT
+from ..ui import ACCENT, console
 from . import COMMANDS
 
 

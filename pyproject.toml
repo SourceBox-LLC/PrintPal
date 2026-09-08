@@ -25,3 +25,22 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/printpal"]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: end-to-end tests that require real tools (e.g. OrcaSlicer) or sibling checkouts; deselect with -m 'not integration'",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# Keep CI stable as ruff evolves: select a fixed, intentional rule set (the
+# pycodestyle/pyflakes/isort/pep8-naming/pyupgrade/bugbear family), matching
+# what PrintMCP enforces. Newer ruff's broader defaults (blind-except, naive
+# datetimes, try/except-pass, nested-if hints) flag the REPL's deliberate
+# never-crash guards and the DB's local-time timestamp convention.
+select = ["E", "F", "I", "N", "UP", "B"]
+# Long lines are handled by the formatter; don't double-flag them.
+ignore = ["E501"]

@@ -2,6 +2,11 @@
 
 Re-exports all command functions and the COMMANDS dict so that ``app.py``
 can import everything from a single package.
+
+NOTE on import order: ``COMMANDS`` must be defined before these submodule
+imports run, because ``help.py`` does ``from . import COMMANDS`` at import time.
+That placement makes these imports land after module-level code, so each carries
+``# noqa: E402``.
 """
 
 from __future__ import annotations
@@ -11,7 +16,8 @@ COMMANDS = {
     "/load": "Load a saved session. Usage: /load <name|id>",
     "/sessions": "List all saved sessions.",
     "/thing": "Manage downloaded models. Usage: /thing [id|export <id> [dest]|delete <id>]",
-    "/slice": "Slice a model to G-code. Usage: /slice <id> [flags]",
+    "/slice": "Slice a model to G-code (Cura or OrcaSlicer). Usage: /slice <id> [flags] [--slicer cura|orca]",
+    "/printer": "Manage printer presets. Usage: /printer [list|show <name>|use <name>|add <name>|remove <name>]",
     "/print": "Full print pipeline: preheat, upload, start. Usage: /print <id> [--no-preheat]",
     "/print status": "Live printer status, temps, and job progress. Ctrl+C to stop.",
     "/print pause": "Pause the active print job.",
@@ -36,59 +42,67 @@ COMMANDS = {
     "/help": "Show available commands.",
 }
 
-from .helpers import (  # noqa: E402
-    find_tool,
-    call_tool,
-    prompt_save_if_dirty,
-    parse_slice_flags,
-    parse_gcode_temps,
-    preheat,
+from .admin import (  # noqa: E402
+    cmd_backup,
+    cmd_config,
+    cmd_cost,
+    cmd_logs,
+    cmd_self_destruct,
 )
-from .session import cmd_save, cmd_load, cmd_sessions  # noqa: E402
-from .thing import cmd_thing, cmd_thing_dispatch, cmd_slice  # noqa: E402
+from .help import cmd_help  # noqa: E402
+from .helpers import (  # noqa: E402
+    call_tool,
+    find_tool,
+    parse_gcode_temps,
+    parse_slice_flags,
+    preheat,
+    prompt_save_if_dirty,
+)
+from .mode import cmd_mode  # noqa: E402
 from .print import (  # noqa: E402
     cmd_print,
-    cmd_print_status,
-    cmd_print_pause,
-    cmd_print_resume,
     cmd_print_cancel,
     cmd_print_connect,
     cmd_print_disconnect,
     cmd_print_files,
+    cmd_print_pause,
     cmd_print_queue,
+    cmd_print_resume,
+    cmd_print_status,
 )
-from .mode import cmd_mode  # noqa: E402
-from .admin import cmd_config, cmd_cost, cmd_logs, cmd_backup, cmd_self_destruct  # noqa: E402
-from .help import cmd_help  # noqa: E402
+from .printer import cmd_printer  # noqa: E402
+from .session import cmd_load, cmd_save, cmd_sessions  # noqa: E402
+from .thing import cmd_slice, cmd_thing, cmd_thing_dispatch  # noqa: E402
 
 __all__ = [
     "COMMANDS",
-    "find_tool",
     "call_tool",
-    "prompt_save_if_dirty",
-    "parse_slice_flags",
-    "parse_gcode_temps",
-    "preheat",
-    "cmd_save",
+    "cmd_backup",
+    "cmd_config",
+    "cmd_cost",
+    "cmd_help",
     "cmd_load",
-    "cmd_sessions",
-    "cmd_thing",
-    "cmd_thing_dispatch",
-    "cmd_slice",
+    "cmd_logs",
+    "cmd_mode",
     "cmd_print",
-    "cmd_print_status",
-    "cmd_print_pause",
-    "cmd_print_resume",
     "cmd_print_cancel",
     "cmd_print_connect",
     "cmd_print_disconnect",
     "cmd_print_files",
+    "cmd_print_pause",
     "cmd_print_queue",
-    "cmd_mode",
-    "cmd_config",
-    "cmd_cost",
-    "cmd_logs",
-    "cmd_backup",
+    "cmd_print_resume",
+    "cmd_print_status",
+    "cmd_printer",
+    "cmd_save",
     "cmd_self_destruct",
-    "cmd_help",
+    "cmd_sessions",
+    "cmd_slice",
+    "cmd_thing",
+    "cmd_thing_dispatch",
+    "find_tool",
+    "parse_gcode_temps",
+    "parse_slice_flags",
+    "preheat",
+    "prompt_save_if_dirty",
 ]
