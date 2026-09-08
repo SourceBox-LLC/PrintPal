@@ -37,31 +37,31 @@ COMMANDS = {
     "/help": "Show available commands.",
 }
 
+from .admin import cmd_backup, cmd_config, cmd_cost, cmd_logs, cmd_self_destruct  # noqa: E402
+from .help import cmd_help  # noqa: E402
 from .helpers import (  # noqa: E402
-    find_tool,
     call_tool,
-    prompt_save_if_dirty,
-    parse_slice_flags,
+    find_tool,
     parse_gcode_temps,
+    parse_slice_flags,
     preheat,
+    prompt_save_if_dirty,
 )
-from .session import cmd_save, cmd_load, cmd_sessions  # noqa: E402
-from .thing import cmd_thing, cmd_thing_dispatch, cmd_slice  # noqa: E402
-from .printer import cmd_printer  # noqa: E402
+from .mode import cmd_mode  # noqa: E402
 from .print import (  # noqa: E402
     cmd_print,
-    cmd_print_status,
-    cmd_print_pause,
-    cmd_print_resume,
     cmd_print_cancel,
     cmd_print_connect,
     cmd_print_disconnect,
     cmd_print_files,
+    cmd_print_pause,
     cmd_print_queue,
+    cmd_print_resume,
+    cmd_print_status,
 )
-from .mode import cmd_mode  # noqa: E402
-from .admin import cmd_config, cmd_cost, cmd_logs, cmd_backup, cmd_self_destruct  # noqa: E402
-from .help import cmd_help  # noqa: E402
+from .printer import cmd_printer  # noqa: E402
+from .session import cmd_load, cmd_save, cmd_sessions  # noqa: E402
+from .thing import cmd_slice, cmd_thing, cmd_thing_dispatch  # noqa: E402
 
 __all__ = [
     "COMMANDS",

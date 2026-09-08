@@ -22,9 +22,7 @@ def cmd_thing(args: list[str]) -> None:
     if not things:
         console.print(Text("No things in database.", style="dim"))
         return
-    table = Table(
-        show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT
-    )
+    table = Table(show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT)
     table.add_column("ID", style="dim", width=5)
     table.add_column("Name", style=f"bold {ACCENT}", min_width=20)
     table.add_column("Type", width=8)
@@ -65,11 +63,7 @@ def cmd_thing_detail(thing_id: int) -> None:
     if t["sliced_from"]:
         lines.append(Text(f"Sliced from: #{t['sliced_from']}"))
     if t["file_data"] is not None:
-        lines.append(
-            Text(
-                f"In DB:       yes ({format_size(len(t['file_data']))})", style="green"
-            )
-        )
+        lines.append(Text(f"In DB:       yes ({format_size(len(t['file_data']))})", style="green"))
     else:
         lines.append(Text("In DB:       no", style="red"))
     console.print(
@@ -136,9 +130,7 @@ def cmd_thing_dispatch(args: list[str]) -> None:
     elif args[0].isdigit():
         cmd_thing_detail(int(args[0]))
     else:
-        console.print(
-            Text("Usage: /thing [id|export <id> [dest]|delete <id>]", style="dim")
-        )
+        console.print(Text("Usage: /thing [id|export <id> [dest]|delete <id>]", style="dim"))
 
 
 def cmd_slice(args: list[str], tools: list) -> None:
@@ -152,9 +144,7 @@ def cmd_slice(args: list[str], tools: list) -> None:
         )
         return
     if not args[0].isdigit():
-        console.print(
-            Text("First argument must be a thing ID (number).", style="bold red")
-        )
+        console.print(Text("First argument must be a thing ID (number).", style="bold red"))
         return
 
     thing_id = int(args[0])
@@ -165,11 +155,11 @@ def cmd_slice(args: list[str], tools: list) -> None:
         return
 
     # Pop the control key (not a tool kwarg). --slicer cura|orca forces a backend.
-    slicer_pref = (flags.pop("_slicer", None) or db.get_setting("slicer") or ORCA_DEFAULTS["slicer"]).lower()
+    slicer_pref = (
+        flags.pop("_slicer", None) or db.get_setting("slicer") or ORCA_DEFAULTS["slicer"]
+    ).lower()
     if slicer_pref not in ("auto", "cura", "orca"):
-        console.print(
-            Text(f"Unknown slicer '{slicer_pref}' (use cura or orca).", style="bold red")
-        )
+        console.print(Text(f"Unknown slicer '{slicer_pref}' (use cura or orca).", style="bold red"))
         return
 
     t = db.get_thing(thing_id)
@@ -186,9 +176,7 @@ def cmd_slice(args: list[str], tools: list) -> None:
         return
     if t["file_data"] is None:
         console.print(
-            Text(
-                f"Thing #{thing_id} has no file data in the database.", style="bold red"
-            )
+            Text(f"Thing #{thing_id} has no file data in the database.", style="bold red")
         )
         return
 
@@ -289,9 +277,7 @@ def _render_slice_result(t, thing_id: int, result_data: dict, title: str, temp_g
         lines.append(Text(f"Process:      {settings['process']}"))
         if settings.get("filament"):
             lines.append(Text(f"Filament:     {settings['filament']}"))
-    lines.append(
-        Text(f"Saved as:     Thing #{gcode_id} (gcode, sliced from #{thing_id})")
-    )
+    lines.append(Text(f"Saved as:     Thing #{gcode_id} (gcode, sliced from #{thing_id})"))
 
     console.print(
         Panel(
@@ -332,9 +318,7 @@ def _slice_via_cura(t, thing_id: int, flags: dict, slice_tool) -> None:
         result = slice_tool.forward(**tool_kwargs)
         result_data = _tool_result_to_dict(result)
         if result_data is None:
-            console.print(
-                Text(f"Unexpected tool output: {str(result)[:200]}", style="bold red")
-            )
+            console.print(Text(f"Unexpected tool output: {str(result)[:200]}", style="bold red"))
             return
         _render_slice_result(
             t, thing_id, result_data, f"Sliced {t['file_name']} (Cura)", temp_gcode
@@ -375,9 +359,7 @@ def _slice_via_orca(t, thing_id: int, flags: dict, orca_tool) -> None:
     )
 
     # Map user-set simple flags to Orca overrides (only flags actually passed).
-    overrides = {
-        ORCA_FLAG_OVERRIDES[k]: v for k, v in flags.items() if k in ORCA_FLAG_OVERRIDES
-    }
+    overrides = {ORCA_FLAG_OVERRIDES[k]: v for k, v in flags.items() if k in ORCA_FLAG_OVERRIDES}
     if "sparse_infill_density" in overrides:
         overrides["sparse_infill_density"] = f"{overrides['sparse_infill_density']}%"
     if flags.get("supports"):
@@ -424,9 +406,7 @@ def _slice_via_orca(t, thing_id: int, flags: dict, orca_tool) -> None:
         )
         result_data = _tool_result_to_dict(result)
         if result_data is None:
-            console.print(
-                Text(f"Unexpected tool output: {str(result)[:200]}", style="bold red")
-            )
+            console.print(Text(f"Unexpected tool output: {str(result)[:200]}", style="bold red"))
             return
         _render_slice_result(
             t,

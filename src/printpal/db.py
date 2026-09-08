@@ -88,17 +88,13 @@ def init_db() -> None:
         conn.commit()
 
         # Add file_data column if it doesn't exist (for existing DBs)
-        columns = [
-            row[1] for row in conn.execute("PRAGMA table_info(things)").fetchall()
-        ]
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(things)").fetchall()]
         if "file_data" not in columns:
             conn.execute("ALTER TABLE things ADD COLUMN file_data BLOB")
             conn.commit()
 
         # Add prompt_history column to sessions if it doesn't exist
-        sess_cols = [
-            row[1] for row in conn.execute("PRAGMA table_info(sessions)").fetchall()
-        ]
+        sess_cols = [row[1] for row in conn.execute("PRAGMA table_info(sessions)").fetchall()]
         if "prompt_history" not in sess_cols:
             conn.execute(
                 "ALTER TABLE sessions ADD COLUMN prompt_history TEXT NOT NULL DEFAULT '[]'"
@@ -107,9 +103,7 @@ def init_db() -> None:
 
         # Add permissions column to sessions if it doesn't exist
         if "permissions" not in sess_cols:
-            conn.execute(
-                "ALTER TABLE sessions ADD COLUMN permissions TEXT NOT NULL DEFAULT '{}'"
-            )
+            conn.execute("ALTER TABLE sessions ADD COLUMN permissions TEXT NOT NULL DEFAULT '{}'")
             conn.commit()
 
         # Seed the default printer preset (idempotent) so a fresh install slices
@@ -151,9 +145,7 @@ def migrate_to_blob_storage() -> int:
     conn = _get_conn()
     try:
         # Check if file_path column exists
-        columns = [
-            row[1] for row in conn.execute("PRAGMA table_info(things)").fetchall()
-        ]
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(things)").fetchall()]
         if "file_path" not in columns:
             return 0
 
@@ -259,9 +251,7 @@ def get_session_by_name(name: str) -> dict[str, Any] | None:
 def get_session_by_id(session_id: int) -> dict[str, Any] | None:
     conn = _get_conn()
     try:
-        row = conn.execute(
-            "SELECT * FROM sessions WHERE id = ?", (session_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
         return dict(row) if row else None
     finally:
         conn.close()
@@ -270,9 +260,7 @@ def get_session_by_id(session_id: int) -> dict[str, Any] | None:
 def list_all_sessions() -> list[dict[str, Any]]:
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            "SELECT * FROM sessions ORDER BY updated_at DESC"
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM sessions ORDER BY updated_at DESC").fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -348,9 +336,7 @@ def get_thing_file_data(thing_id: int) -> bytes | None:
     """Return just the file_data BLOB for a thing, or None."""
     conn = _get_conn()
     try:
-        row = conn.execute(
-            "SELECT file_data FROM things WHERE id = ?", (thing_id,)
-        ).fetchone()
+        row = conn.execute("SELECT file_data FROM things WHERE id = ?", (thing_id,)).fetchone()
         return row["file_data"] if row else None
     finally:
         conn.close()
@@ -403,9 +389,7 @@ def update_thing_status(thing_id: int, status: str) -> None:
 def is_step_scanned(step_key: str) -> bool:
     conn = _get_conn()
     try:
-        row = conn.execute(
-            "SELECT 1 FROM scanned_steps WHERE step_key = ?", (step_key,)
-        ).fetchone()
+        row = conn.execute("SELECT 1 FROM scanned_steps WHERE step_key = ?", (step_key,)).fetchone()
         return row is not None
     finally:
         conn.close()
@@ -414,9 +398,7 @@ def is_step_scanned(step_key: str) -> bool:
 def mark_step_scanned(step_key: str) -> None:
     conn = _get_conn()
     try:
-        conn.execute(
-            "INSERT OR IGNORE INTO scanned_steps (step_key) VALUES (?)", (step_key,)
-        )
+        conn.execute("INSERT OR IGNORE INTO scanned_steps (step_key) VALUES (?)", (step_key,))
         conn.commit()
     finally:
         conn.close()
@@ -490,9 +472,7 @@ def clear_queue() -> int:
 def get_setting(key: str) -> str | None:
     conn = _get_conn()
     try:
-        row = conn.execute(
-            "SELECT value FROM settings WHERE key = ?", (key,)
-        ).fetchone()
+        row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
         return row["value"] if row else None
     finally:
         conn.close()
@@ -608,9 +588,7 @@ def delete_printer(name: str) -> bool:
     """Delete a printer preset by name. Returns True if one was removed."""
     conn = _get_conn()
     try:
-        cursor = conn.execute(
-            "DELETE FROM printers WHERE name = ? COLLATE NOCASE", (name,)
-        )
+        cursor = conn.execute("DELETE FROM printers WHERE name = ? COLLATE NOCASE", (name,))
         conn.commit()
         return cursor.rowcount > 0
     finally:
@@ -668,9 +646,7 @@ def get_logs(limit: int = 20, level: str | None = None) -> list[dict[str, Any]]:
                 (level.upper(), limit),
             ).fetchall()
         else:
-            rows = conn.execute(
-                "SELECT * FROM logs ORDER BY id DESC LIMIT ?", (limit,)
-            ).fetchall()
+            rows = conn.execute("SELECT * FROM logs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()

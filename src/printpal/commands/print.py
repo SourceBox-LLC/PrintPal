@@ -12,8 +12,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..ui import console, ACCENT, prompt_yes_no, format_size, format_duration, make_bar
 from .. import db
+from ..ui import ACCENT, console, format_duration, format_size, make_bar, prompt_yes_no
 from .helpers import call_tool, parse_gcode_temps, preheat
 
 
@@ -55,11 +55,7 @@ def cmd_print(args: list[str], tools: list) -> None:
     ready = status.get("ready", False)
     conn_state = status.get("connection", {}).get("state", "unknown")
 
-    if (
-        "Offline" in str(conn_state)
-        or "Closed" in str(conn_state)
-        or conn_state == "unknown"
-    ):
+    if "Offline" in str(conn_state) or "Closed" in str(conn_state) or conn_state == "unknown":
         if prompt_yes_no("Printer is not connected. Connect now? [y/N] "):
             result = call_tool(
                 tools,
@@ -69,9 +65,7 @@ def cmd_print(args: list[str], tools: list) -> None:
                 response_format="json",
             )
             if result is None:
-                console.print(
-                    Text("Failed to connect to the printer.", style="bold red")
-                )
+                console.print(Text("Failed to connect to the printer.", style="bold red"))
                 return
             time.sleep(2)
             status = call_tool(tools, "octoprint_get_status", response_format="json")
@@ -80,22 +74,16 @@ def cmd_print(args: list[str], tools: list) -> None:
     if not ready:
         queue = db.get_queue()
         queue_msg = f" ({len(queue)} item(s) in queue)" if queue else ""
-        if prompt_yes_no(
-            f"Printer is busy or not ready{queue_msg}. Add to print queue? [y/N] "
-        ):
+        if prompt_yes_no(f"Printer is busy or not ready{queue_msg}. Add to print queue? [y/N] "):
             pos = db.add_to_queue(thing_id)
-            console.print(
-                Text(f"Added to queue (position {pos}).", style=f"bold {ACCENT}")
-            )
+            console.print(Text(f"Added to queue (position {pos}).", style=f"bold {ACCENT}"))
         return
 
     if not no_preheat:
         tool_temp, bed_temp = parse_gcode_temps(t["file_data"])
         preheat(tools, tool_temp, bed_temp)
 
-    console.print(
-        Text(f"Uploading {t['file_name']} to OctoPrint...", style=f"bold {ACCENT}")
-    )
+    console.print(Text(f"Uploading {t['file_name']} to OctoPrint...", style=f"bold {ACCENT}"))
     temp_gcode = None
     try:
         with tempfile.NamedTemporaryFile(suffix=".gcode", delete=False) as f:
@@ -154,9 +142,7 @@ def cmd_print(args: list[str], tools: list) -> None:
             return
 
         db.update_thing_status(thing_id, "printing")
-        console.print(
-            Text("Print started! Use /print status to monitor.", style=f"bold {ACCENT}")
-        )
+        console.print(Text("Print started! Use /print status to monitor.", style=f"bold {ACCENT}"))
 
         job = call_tool(tools, "octoprint_get_job", response_format="json")
         if job:
@@ -190,15 +176,11 @@ def _build_status_panel(tools: list) -> Panel:
     server = status.get("server", {})
     if server.get("version"):
         lines.append(
-            Text(
-                f"OctoPrint:  {server.get('version', '?')} (API {server.get('api', '?')})"
-            )
+            Text(f"OctoPrint:  {server.get('version', '?')} (API {server.get('api', '?')})")
         )
     conn = status.get("connection", {})
     lines.append(Text(f"Connection: {conn.get('state', 'unknown') or 'unknown'}"))
-    lines.append(
-        Text(f"State:      {status.get('printer_state', 'unknown') or 'unknown'}")
-    )
+    lines.append(Text(f"State:      {status.get('printer_state', 'unknown') or 'unknown'}"))
     lines.append(Text(f"Ready:      {'yes' if status.get('ready') else 'no'}"))
 
     temps = status.get("temperatures", {})
@@ -214,9 +196,7 @@ def _build_status_panel(tools: list) -> Panel:
                 bar = make_bar(actual, target, 10)
                 reached = " \u2713" if abs(actual - target) <= 2 else ""
                 lines.append(
-                    Text(
-                        f"  {label:6s} {actual:.0f}\u00b0C \u2192 {target}\u00b0C  {bar}{reached}"
-                    )
+                    Text(f"  {label:6s} {actual:.0f}\u00b0C \u2192 {target}\u00b0C  {bar}{reached}")
                 )
             else:
                 lines.append(Text(f"  {label:6s} {actual:.0f}\u00b0C"))
@@ -242,9 +222,7 @@ def _build_status_panel(tools: list) -> Panel:
         lines.append(Text(""))
         lines.append(Text(f"Print Queue: {len(queue)} item(s)", style="bold"))
         for q in queue[:3]:
-            lines.append(
-                Text(f"  #{q['position']}: Thing #{q['thing_id']} ({q['name']})")
-            )
+            lines.append(Text(f"  #{q['position']}: Thing #{q['thing_id']} ({q['name']})"))
 
     lines.append(Text(""))
     lines.append(Text("Press Ctrl+C to stop monitoring.", style="dim"))
@@ -402,17 +380,13 @@ def cmd_print_disconnect(tools: list) -> None:
 def cmd_print_files(tools: list) -> None:
     result = call_tool(tools, "octoprint_list_files", response_format="json")
     if result is None:
-        console.print(
-            Text("Could not list files. Is OctoPrint configured?", style="bold red")
-        )
+        console.print(Text("Could not list files. Is OctoPrint configured?", style="bold red"))
         return
     files = result.get("files", [])
     if not files:
         console.print(Text("No G-code files on the server.", style="dim"))
         return
-    table = Table(
-        show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT
-    )
+    table = Table(show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT)
     table.add_column("Path", style=f"bold {ACCENT}", min_width=20)
     table.add_column("Size", justify="right", width=10)
     table.add_column("Est. Time", width=15)
@@ -437,27 +411,21 @@ def cmd_print_queue(args: list[str]) -> None:
             console.print(Text("Position must be a number.", style="bold red"))
             return
         if db.remove_from_queue(pos):
-            console.print(
-                Text(f"Removed position {pos} from queue.", style=f"bold {ACCENT}")
-            )
+            console.print(Text(f"Removed position {pos} from queue.", style=f"bold {ACCENT}"))
         else:
             console.print(Text(f"No queue item at position {pos}.", style="bold red"))
         return
 
     if args and args[0] == "clear":
         count = db.clear_queue()
-        console.print(
-            Text(f"Cleared {count} item(s) from queue.", style=f"bold {ACCENT}")
-        )
+        console.print(Text(f"Cleared {count} item(s) from queue.", style=f"bold {ACCENT}"))
         return
 
     queue = db.get_queue()
     if not queue:
         console.print(Text("Print queue is empty.", style="dim"))
         return
-    table = Table(
-        show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT
-    )
+    table = Table(show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT)
     table.add_column("Pos", style="dim", width=5)
     table.add_column("Thing ID", width=10)
     table.add_column("Name", style=f"bold {ACCENT}", min_width=20)

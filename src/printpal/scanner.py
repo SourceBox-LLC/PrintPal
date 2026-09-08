@@ -33,10 +33,7 @@ def scan_for_downloads(agent) -> None:
         if "thingiverse_download_model" in step.code_action:
             _insert_download_from_step(step)
             db.mark_step_scanned(step_key)
-        elif (
-            "cura_slice_model" in step.code_action
-            or "orca_slice_model" in step.code_action
-        ):
+        elif "cura_slice_model" in step.code_action or "orca_slice_model" in step.code_action:
             _insert_slice_from_step(step)
             db.mark_step_scanned(step_key)
 
@@ -85,10 +82,7 @@ def _insert_download_from_step(step) -> None:
             "thing_id": int(thing_match.group(1)) if thing_match else None,
             "name": name_match.group(1).strip() if name_match else "Unknown",
             "license": license_match.group(1).strip() if license_match else None,
-            "files": [
-                {"name": m[0], "size_bytes": int(m[1]), "path": m[2]}
-                for m in file_matches
-            ],
+            "files": [{"name": m[0], "size_bytes": int(m[1]), "path": m[2]} for m in file_matches],
         }
 
     if not data or not data.get("files"):

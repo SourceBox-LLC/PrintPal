@@ -6,9 +6,9 @@ from rich import box
 from rich.table import Table
 from rich.text import Text
 
-from ..ui import console, ACCENT, prompt_yes_no
 from .. import db
-from ..sessions import next_default_name, save_session, load_session, list_sessions
+from ..sessions import list_sessions, load_session, next_default_name, save_session
+from ..ui import ACCENT, console, prompt_yes_no
 from .helpers import prompt_save_if_dirty
 
 
@@ -70,9 +70,7 @@ def cmd_sessions() -> None:
     if not sessions:
         console.print(Text("No saved sessions.", style="dim"))
         return
-    table = Table(
-        show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT
-    )
+    table = Table(show_header=True, header_style="bold", box=box.HORIZONTALS, border_style=ACCENT)
     table.add_column("ID", style="dim", width=5)
     table.add_column("Name", style=f"bold {ACCENT}", min_width=20)
     table.add_column("Steps", justify="right", width=6)
